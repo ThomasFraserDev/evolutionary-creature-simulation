@@ -9,6 +9,7 @@ struct Creature {
     float vision;
     float speed;
     int energy;
+    float lastReproduction;
     Color color;
 };
 
@@ -23,11 +24,11 @@ InitWindow(800, 600, "simulation");
 SetTargetFPS(60);
 
 std::vector<Creature> creatures = { // Create 5 creatures and their properties
-    {{100, 100}, {0.5f, 0.0f}, 15.0f, 130.0f, 2.0f, 1000, RED},
-    {{200, 150}, {0.0f, 0.5f}, 15.0f, 150.0f, 1.5f, 1000, BLUE},
-    {{300, 220}, {-0.5f, 0.0f}, 15.0f, 200.0f, 1.0f, 1000, GREEN},
-    {{400, 360}, {-0.5f, 0.0f}, 15.0f, 170.0f, 1.67f, 1000, PURPLE},
-    {{500, 420}, {-0.5f, 0.0f}, 15.0f, 160.0f, 1.3f, 1000, PINK}
+    {{100, 100}, {0.5f, 0.0f}, 15.0f, 130.0f, 2.0f, 1000, 0.0f, RED},
+    {{200, 150}, {0.0f, 0.5f}, 15.0f, 150.0f, 1.5f, 1000, 0.0f, BLUE},
+    {{300, 220}, {-0.5f, 0.0f}, 15.0f, 200.0f, 1.0f, 1000, 0.0f, GREEN},
+    {{400, 360}, {-0.5f, 0.0f}, 15.0f, 170.0f, 1.67f, 1000, 0.0f, PURPLE},
+    {{500, 420}, {-0.5f, 0.0f}, 15.0f, 160.0f, 1.3f, 1000, 0.0f, PINK}
 };
 
 std::vector<Food> food = { // Create 5 pieces of food with their properties 
@@ -43,7 +44,7 @@ float lastFoodSpawnTime = 0.0;
 while (!WindowShouldClose()) { // Main loop
 
     if (GetTime() - lastFoodSpawnTime >= 10.0) {
-        for (int i = 0; i < 5; ++i) { // Spawn 5 new pieces of food every 10s
+        for (int i = 0; i < 7; ++i) { // Spawn 7 new pieces of food every 10s
             food.push_back({{static_cast<float>(GetRandomValue(50, 750)), static_cast<float>(GetRandomValue(50, 550))}, 9.0f, GOLD});
         }
         lastFoodSpawnTime = GetTime();
@@ -112,6 +113,13 @@ while (!WindowShouldClose()) { // Main loop
     }
 
     for (int i = 0; i < creatures.size(); ++i) {
+        if (creatures[i].radius > 20.0f && GetTime() - creatures[i].lastReproduction > 6.0f) { // If big enough, a creature can create offspring every 6s
+            Creature offspring = {creatures[i].position, {0.0f, 0.0f}, static_cast<float>(creatures[i].radius * 0.7), creatures[i].vision + (GetRandomValue(-20, 20)), creatures[i].speed + (GetRandomValue(-20, 20) / 100.0f), 500, static_cast<float>(GetTime()), creatures[i].color};
+            creatures.push_back(offspring);
+            creatures[i].lastReproduction = GetTime();
+            creatures[i].energy -= 200;
+            creatures[i].radius *= 0.9f;
+        }
         if (creatures[i].energy <= 0) { 
             creatures.erase(creatures.begin() + i); // Remove a ceature when its energy depletes to 0
             --i;  // Adjust index after removal
