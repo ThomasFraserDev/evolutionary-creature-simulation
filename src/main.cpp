@@ -2,6 +2,12 @@
 #include <vector>
 #include <cmath>
 
+enum class Behaviour { // Class for creature behaviour 
+    Wander,
+    SeekFood,
+    Hunt
+};
+
 struct Creature {
     Vector2 position;
     Vector2 velocity;
@@ -12,6 +18,9 @@ struct Creature {
     float lastReproduction; // Time since creature last reproduced 
     float deathTime; // Time it takes creature to finalise death
     Color color;
+    Behaviour behaviour;
+    Vector2 targetPos;
+    float behaviourUntil;
 };
 
 struct Food {
@@ -25,14 +34,19 @@ int main() {
     SetTargetFPS(60);
 
     std::vector<Creature> creatures = { // Create 5 creatures and their properties
-        {{static_cast<float>(GetRandomValue(50, 950)), static_cast<float>(GetRandomValue(50, 750))}, {0.5f, 0.0f}, 15.0f, 130.0f, 2.0f, 1000, 0.0f, 0.0f, RED},
-        {{static_cast<float>(GetRandomValue(50, 950)), static_cast<float>(GetRandomValue(50, 750))}, {0.0f, 0.5f}, 15.0f, 150.0f, 1.5f, 1000, 0.0f, 0.0f, BLUE},
-        {{static_cast<float>(GetRandomValue(50, 950)), static_cast<float>(GetRandomValue(50, 750))}, {-0.5f, 0.0f}, 15.0f, 200.0f, 1.0f, 1000, 0.0f, 0.0f, GREEN},
-        {{static_cast<float>(GetRandomValue(50, 950)), static_cast<float>(GetRandomValue(50, 750))}, {-0.5f, 0.0f}, 15.0f, 135.0f, 1.67f, 1000, 0.0f, 0.0f, PURPLE},
-        {{static_cast<float>(GetRandomValue(50, 950)), static_cast<float>(GetRandomValue(50, 750))}, {-0.5f, 0.0f}, 15.0f, 160.0f, 1.3f, 1000, 0.0f, 0.0f, PINK}
+        {{static_cast<float>(GetRandomValue(50, 950)), static_cast<float>(GetRandomValue(50, 750))}, {0.5f, 0.0f}, 15.0f, 130.0f, 2.0f, 1400, 0.0f, 0.0f, RED, Behaviour::Wander, {0.0f, 0.0f}, 0.0f},
+        {{static_cast<float>(GetRandomValue(50, 950)), static_cast<float>(GetRandomValue(50, 750))}, {0.0f, 0.5f}, 15.0f, 150.0f, 1.5f, 1400, 0.0f, 0.0f, BLUE, Behaviour::Wander, {0.0f, 0.0f}, 0.0f},
+        {{static_cast<float>(GetRandomValue(50, 950)), static_cast<float>(GetRandomValue(50, 750))}, {-0.5f, 0.0f}, 15.0f, 200.0f, 1.0f, 1400, 0.0f, 0.0f, GREEN, Behaviour::Wander, {0.0f, 0.0f}, 0.0f},
+        {{static_cast<float>(GetRandomValue(50, 950)), static_cast<float>(GetRandomValue(50, 750))}, {-0.5f, 0.0f}, 15.0f, 135.0f, 1.67f, 1400, 0.0f, 0.0f, PURPLE, Behaviour::Wander, {0.0f, 0.0f}, 0.0f},
+        {{static_cast<float>(GetRandomValue(50, 950)), static_cast<float>(GetRandomValue(50, 750))}, {-0.5f, 0.0f}, 15.0f, 160.0f, 1.3f, 1400, 0.0f, 0.0f, PINK, Behaviour::Wander, {0.0f, 0.0f}, 0.0f}
     };
 
-    std::vector<Food> food = { // Create 5 pieces of food with their properties 
+    std::vector<Food> food = { // Create 10 pieces of food with their properties 
+        {{static_cast<float>(GetRandomValue(50, 950)), static_cast<float>(GetRandomValue(50, 750))}, 9.0f, GOLD},
+        {{static_cast<float>(GetRandomValue(50, 950)), static_cast<float>(GetRandomValue(50, 750))}, 9.0f, GOLD},
+        {{static_cast<float>(GetRandomValue(50, 950)), static_cast<float>(GetRandomValue(50, 750))}, 9.0f, GOLD},
+        {{static_cast<float>(GetRandomValue(50, 950)), static_cast<float>(GetRandomValue(50, 750))}, 9.0f, GOLD},
+        {{static_cast<float>(GetRandomValue(50, 950)), static_cast<float>(GetRandomValue(50, 750))}, 9.0f, GOLD},
         {{static_cast<float>(GetRandomValue(50, 950)), static_cast<float>(GetRandomValue(50, 750))}, 9.0f, GOLD},
         {{static_cast<float>(GetRandomValue(50, 950)), static_cast<float>(GetRandomValue(50, 750))}, 9.0f, GOLD},
         {{static_cast<float>(GetRandomValue(50, 950)), static_cast<float>(GetRandomValue(50, 750))}, 9.0f, GOLD},
@@ -41,24 +55,38 @@ int main() {
     };
 
     float lastFoodSpawnTime = 0.0; // Value for tracking time since last food spawn
+    int trackedCreature = -1;
 
     while (!WindowShouldClose()) { // Main loop
 
-        if (GetTime() - lastFoodSpawnTime >= 6.0) {
-            for (int i = 0; i < 7; ++i) { // Spawn 7 new pieces of food every 6s
-                food.push_back({{static_cast<float>(GetRandomValue(50, 950)), static_cast<float>(GetRandomValue(50, 750))}, 9.0f, GOLD});
+        if (GetTime() - lastFoodSpawnTime >= 5.0) {
+            for (int i = 0; i < 5; ++i) { // Spawn 7 new pieces of food every 5s
+                food.push_back({{static_cast<float>(GetRandomValue(20, 980)), static_cast<float>(GetRandomValue(50, 750))}, 9.0f, GOLD});
             }
             lastFoodSpawnTime = GetTime();
         }
 
-        // Creature movement
+        // Creature behaviour
 
         for (Creature& creature : creatures) {
+            float now = GetTime();
             int closestFood = -1; // Index of closest food to creature, set to none by default
             int closestCreature = -1;
             float detectionRange = creature.vision * creature.vision; // Squared range of vision
             float closestDist = detectionRange; // Distance of the closest food
 
+            if (creature.energy <= 300) {
+                creature.behaviour = Behaviour::Hunt;
+            } else if (creature.energy <= 700) {
+                creature.behaviour = Behaviour::SeekFood;
+            } else if (now >= creature.behaviourUntil) {
+                creature.behaviour = Behaviour::Wander;
+                creature.targetPos = {
+                    static_cast<float>(GetRandomValue(20, 980)),
+                    static_cast<float>(GetRandomValue(20, 780))
+                };
+                creature.behaviourUntil = now + GetRandomValue(2, 5);
+            }
             if (creature.energy <= 300) {
                 for (int i = 0; i < creatures.size(); ++i) {
                     if ((creature.position.x != creatures[i].position.x) && (creature.position.y != creatures[i].position.y) && (creature.radius > creatures[i].radius)) {
@@ -66,24 +94,27 @@ int main() {
                         float dy = creatures[i].position.y - creature.position.y;
                         float dist = dx * dx + dy * dy; // Calculate distance between creature and each other smaller creature
                 
-                        if (dist < detectionRange && dist < closestDist) { // Check if food is the closest one to the creature
+                        if (dist < detectionRange && dist < closestDist) { // Check if smaller creature is the closest one to the creature
                             closestDist = dist;
                             closestCreature = i;
                         }
                     }
-                    if (closestCreature != -1) { // If there's a closest piece of food 
+                    if (closestCreature != -1) { // If there's a closest creature
                         float dx = creatures[closestCreature].position.x - creature.position.x;
                         float dy = creatures[closestCreature].position.y - creature.position.y;
                         float len = sqrt(dx * dx + dy * dy); // Calculate and normalize direction for movement
                         if (len > 0.0001f) {
+                            creature.behaviour = Behaviour::Hunt;
                             float targetVx = (dx / len) * creature.speed;
                             float targetVy = (dy / len) * creature.speed;
-                            creature.velocity.x = creature.velocity.x * 0.9f + targetVx * 0.1f; // Turn creature towards direction of food 
+                            creature.velocity.x = creature.velocity.x * 0.9f + targetVx * 0.1f; // Turn creature towards direction of target creature
                             creature.velocity.y = creature.velocity.y * 0.9f + targetVy * 0.1f;
                         }
                     }
                 }
             }
+
+            Vector2 desired = creature.velocity;
 
             for (int i = 0; i < food.size(); ++i) {
                 float dx = food[i].position.x - creature.position.x;
@@ -95,22 +126,36 @@ int main() {
                     closestFood = i;
                 }
             }
-            if (closestFood != -1 && closestCreature == -1) { // If there's a closest piece of food 
+
+            if (creature.behaviour == Behaviour::SeekFood && closestFood != -1) {
                 float dx = food[closestFood].position.x - creature.position.x;
                 float dy = food[closestFood].position.y - creature.position.y;
                 float len = sqrt(dx * dx + dy * dy); // Calculate and normalize direction for movement
                 if (len > 0.0001f) {
-                    float targetVx = (dx / len) * creature.speed;
-                    float targetVy = (dy / len) * creature.speed;
-                    creature.velocity.x = creature.velocity.x * 0.9f + targetVx * 0.1f; // Turn creature towards direction of food 
-                    creature.velocity.y = creature.velocity.y * 0.9f + targetVy * 0.1f;
+                    desired = {(dx / len) * creature.speed, (dy / len) * creature.speed};
                 }
             }
 
-            else if (GetRandomValue(0, 100) < 2) { // If no enearby food and random chance of staying still isn't triggered 
-                creature.velocity.x = (GetRandomValue(-100, 100) / 100.0f) * creature.speed; // Move random direction on the x axis
-                creature.velocity.y = (GetRandomValue(-100, 100) / 100.0f) * creature.speed; // Move random direction on the y axis
+            else if (creature.behaviour == Behaviour::Hunt && closestCreature != -1) {
+                float dx = creatures[closestCreature].position.x - creature.position.x;
+                float dy = creatures[closestCreature].position.y - creature.position.y;
+                float len = sqrt(dx * dx + dy * dy); // Calculate and normalize direction for movement
+                if (len > 0.0001f) {
+                    desired = {(dx / len) * creature.speed, (dy / len) * creature.speed};
+                }
             }
+
+            else if (creature.behaviour == Behaviour::Wander) {
+                float dx = creature.targetPos.x - creature.position.x;
+                float dy = creature.targetPos.y - creature.position.y;
+                float len = sqrt(dx * dx + dy * dy); // Calculate and normalize direction for movement
+                if (len > 0.0001f) {
+                    desired = { (dx / len) * creature.speed, (dy / len) * creature.speed };
+                }
+            }
+
+            creature.velocity.x = creature.velocity.x * 0.9f + desired.x * 0.1f;
+            creature.velocity.y = creature.velocity.y * 0.9f + desired.y * 0.1f;
 
             creature.position.x += creature.velocity.x;
             creature.position.y += creature.velocity.y;
@@ -194,7 +239,7 @@ int main() {
             for (int i = 0; i < food.size(); ++i) {
                 if (CheckCollisionCircleRec(creature.position, creature.radius, {food[i].position.x, food[i].position.y, food[i].size, food[i].size})) { // Check if creature collides with food
                     creature.energy += (15000 / creature.radius); // Increase creature energy and size after collision, and remove the food afterwards. Energy gained is dependent on creature size
-                    creature.radius += 5;
+                    creature.radius += 3;
                     food.erase(food.begin() + i);
                     --i;
                 }
@@ -204,17 +249,20 @@ int main() {
         // Reproduction & death
 
         for (int i = 0; i < creatures.size(); ++i) {
-            if (creatures[i].radius > 20.0f && GetTime() - creatures[i].lastReproduction > 15.0f) { // If big enough, a creature can create offspring every 6s
+            if (creatures[i].radius > 30.0f && GetTime() - creatures[i].lastReproduction > 15.0f) { // If big enough, a creature can create offspring every 6s
                 Creature offspring = { // Create offspring at an offset from its parent's position, with modifications of their properties
                     {creatures[i].position.x + GetRandomValue(-10, 10), creatures[i].position.y + GetRandomValue(-10, 10)},
                     {0.0f, 0.0f},
-                    static_cast<float>(creatures[i].radius * 0.6),
+                    static_cast<float>(creatures[i].radius * 0.4),
                     creatures[i].vision + (GetRandomValue(-10, 10)),
-                    creatures[i].speed + (GetRandomValue(-10, 10) / 100.0f),
+                    creatures[i].speed + (GetRandomValue(-30, 30) / 100.0f),
                     700,
                     static_cast<float>(GetTime()),
                     0.0f,
-                    creatures[i].color
+                    creatures[i].color,
+                    Behaviour::Wander,
+                    {0.0f, 0.0f},
+                    0.0f
                 };
                 creatures.push_back(offspring);
                 creatures[i].lastReproduction = GetTime(); // Reset reproduction timer
@@ -233,6 +281,38 @@ int main() {
                     --i;  // Adjust index after removal
                 }
             }
+        }
+
+        Vector2 mouse = GetMousePosition();
+        
+        for (int i = 0; i < creatures.size(); ++i) {
+            float dx = mouse.x - creatures[i].position.x;
+            float dy = mouse.y - creatures[i].position.y;
+            float distSq = dx * dx + dy * dy;
+
+            if (distSq < creatures[i].radius * creatures[i].radius && IsMouseButtonPressed(MOUSE_BUTTON_LEFT)) {
+                trackedCreature = i;
+            }
+        }
+        if (trackedCreature != -1) {
+            const char* behaviourText = "Wandering...";
+            if (creatures[trackedCreature].behaviour == Behaviour::SeekFood) {
+                behaviourText = "Seeking food...";
+            } else if (creatures[trackedCreature].behaviour == Behaviour::Hunt) {
+                behaviourText = "Hunting...";
+            }
+
+            DrawText(
+                TextFormat(
+                    "Behaviour: %s\nEnergy: %d\nSpeed: %.2f\nRadius: %.2f\nVision: %.2f",
+                    behaviourText,
+                    creatures[trackedCreature].energy,
+                    creatures[trackedCreature].speed,
+                    creatures[trackedCreature].radius,
+                    creatures[trackedCreature].vision
+                ),
+                20,20,20,creatures[trackedCreature].color
+            );
         }
 
         BeginDrawing();
