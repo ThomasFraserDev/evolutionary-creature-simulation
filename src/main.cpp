@@ -30,38 +30,52 @@ struct Food {
 };
 
 int main() {
-    InitWindow(1000, 800, "simulation");
+    InitWindow(1500, 1000, "Simulation");
     SetTargetFPS(60);
 
-    std::vector<Creature> creatures = { // Create 5 creatures and their properties
-        {{static_cast<float>(GetRandomValue(50, 950)), static_cast<float>(GetRandomValue(50, 750))}, {0.5f, 0.0f}, 15.0f, 130.0f, 2.0f, 1400, 0.0f, 0.0f, RED, Behaviour::Wander, {0.0f, 0.0f}, 0.0f},
-        {{static_cast<float>(GetRandomValue(50, 950)), static_cast<float>(GetRandomValue(50, 750))}, {0.0f, 0.5f}, 15.0f, 150.0f, 1.5f, 1400, 0.0f, 0.0f, BLUE, Behaviour::Wander, {0.0f, 0.0f}, 0.0f},
-        {{static_cast<float>(GetRandomValue(50, 950)), static_cast<float>(GetRandomValue(50, 750))}, {-0.5f, 0.0f}, 15.0f, 200.0f, 1.0f, 1400, 0.0f, 0.0f, GREEN, Behaviour::Wander, {0.0f, 0.0f}, 0.0f},
-        {{static_cast<float>(GetRandomValue(50, 950)), static_cast<float>(GetRandomValue(50, 750))}, {-0.5f, 0.0f}, 15.0f, 135.0f, 1.67f, 1400, 0.0f, 0.0f, PURPLE, Behaviour::Wander, {0.0f, 0.0f}, 0.0f},
-        {{static_cast<float>(GetRandomValue(50, 950)), static_cast<float>(GetRandomValue(50, 750))}, {-0.5f, 0.0f}, 15.0f, 160.0f, 1.3f, 1400, 0.0f, 0.0f, PINK, Behaviour::Wander, {0.0f, 0.0f}, 0.0f}
-    };
+    std::vector<Creature> creatures; 
+    const int creatureCount = 20;
 
-    std::vector<Food> food = { // Create 10 pieces of food with their properties 
-        {{static_cast<float>(GetRandomValue(50, 950)), static_cast<float>(GetRandomValue(50, 750))}, 9.0f, GOLD},
-        {{static_cast<float>(GetRandomValue(50, 950)), static_cast<float>(GetRandomValue(50, 750))}, 9.0f, GOLD},
-        {{static_cast<float>(GetRandomValue(50, 950)), static_cast<float>(GetRandomValue(50, 750))}, 9.0f, GOLD},
-        {{static_cast<float>(GetRandomValue(50, 950)), static_cast<float>(GetRandomValue(50, 750))}, 9.0f, GOLD},
-        {{static_cast<float>(GetRandomValue(50, 950)), static_cast<float>(GetRandomValue(50, 750))}, 9.0f, GOLD},
-        {{static_cast<float>(GetRandomValue(50, 950)), static_cast<float>(GetRandomValue(50, 750))}, 9.0f, GOLD},
-        {{static_cast<float>(GetRandomValue(50, 950)), static_cast<float>(GetRandomValue(50, 750))}, 9.0f, GOLD},
-        {{static_cast<float>(GetRandomValue(50, 950)), static_cast<float>(GetRandomValue(50, 750))}, 9.0f, GOLD},
-        {{static_cast<float>(GetRandomValue(50, 950)), static_cast<float>(GetRandomValue(50, 750))}, 9.0f, GOLD},
-        {{static_cast<float>(GetRandomValue(50, 950)), static_cast<float>(GetRandomValue(50, 750))}, 9.0f, GOLD}
-    };
+    Color colors[] = { RED, BLUE, GREEN, PURPLE, PINK, ORANGE, YELLOW, SKYBLUE, VIOLET, MAROON, DARKGREEN, DARKBLUE };
+
+    for (int i = 0; i < creatureCount; ++i) { // Create initial creatures
+        Creature creature {
+            {static_cast<float>(GetRandomValue(20, 1480)), static_cast<float>(GetRandomValue(20, 980))}, // Position
+            {GetRandomValue(-100, 100) / 100.0f, GetRandomValue(-100, 100) / 100.0f }, // Velocity
+            15.0f, // Radius
+            static_cast<float>(GetRandomValue(300, 500)), // Vision
+            GetRandomValue(10, 25) / 10.0f, // Speed
+            1400, // Energy
+            0.0f, // Time since last reproduction
+            0.0f, // Time the creature has been in a dying state for
+            colors[GetRandomValue(0, 11)], // Colour
+            Behaviour::Wander, // Behaviour
+            {0.0f, 0.0f}, // Target position
+            0.0f // Behaviour timer
+        };
+        creatures.push_back(creature);
+    }
+
+    std::vector<Food> food; // Create initial food
+    const int foodCount = 25;
+
+    for (int i = 0; i < foodCount; ++i) {
+        Food foodPiece {
+            {static_cast<float>(GetRandomValue(20, 1480)),static_cast<float>(GetRandomValue(20, 980))}, // Position
+            9.0f, // Size
+            GOLD // Colour
+        };
+        food.push_back(foodPiece);
+    }
 
     float lastFoodSpawnTime = 0.0; // Value for tracking time since last food spawn
     int trackedCreature = -1;
 
     while (!WindowShouldClose()) { // Main loop
 
-        if (GetTime() - lastFoodSpawnTime >= 5.0) {
-            for (int i = 0; i < 5; ++i) { // Spawn 7 new pieces of food every 5s
-                food.push_back({{static_cast<float>(GetRandomValue(20, 980)), static_cast<float>(GetRandomValue(50, 750))}, 9.0f, GOLD});
+        if (GetTime() - lastFoodSpawnTime >= 3.0) {
+            for (int i = 0; i < 12; ++i) { // Spawn 12 new pieces of food every 3s
+                food.push_back({{static_cast<float>(GetRandomValue(20, 1480)), static_cast<float>(GetRandomValue(20, 980))}, 9.0f, GOLD});
             }
             lastFoodSpawnTime = GetTime();
         }
@@ -82,8 +96,8 @@ int main() {
             } else if (now >= creature.behaviourUntil) {
                 creature.behaviour = Behaviour::Wander;
                 creature.targetPos = {
-                    static_cast<float>(GetRandomValue(20, 980)),
-                    static_cast<float>(GetRandomValue(20, 780))
+                    static_cast<float>(GetRandomValue(20, 1480)),
+                    static_cast<float>(GetRandomValue(20, 980))
                 };
                 creature.behaviourUntil = now + GetRandomValue(2, 5);
             }
@@ -166,16 +180,16 @@ int main() {
                 creature.position.x = creature.radius;
                 creature.velocity.x *= -1;
             }
-            if (creature.position.x + creature.radius > 1000) {
-                creature.position.x = 1000 - creature.radius;
+            if (creature.position.x + creature.radius > 1500) {
+                creature.position.x = 1500 - creature.radius;
                 creature.velocity.x *= -1;
             }
             if (creature.position.y - creature.radius < 0) {
                 creature.position.y = creature.radius;
                 creature.velocity.y *= -1;
             }
-            if (creature.position.y + creature.radius > 800) {
-                creature.position.y = 800 - creature.radius;
+            if (creature.position.y + creature.radius > 1000) {
+                creature.position.y = 1000 - creature.radius;
                 creature.velocity.y *= -1;
             }
         }
