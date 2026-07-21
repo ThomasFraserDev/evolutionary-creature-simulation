@@ -8,6 +8,7 @@ find_package(raylib REQUIRED)
 
 add_executable(simulation
 src/main.cpp
+src/Simulation.cpp
 )
 
 target_link_libraries(simulation raylib)
