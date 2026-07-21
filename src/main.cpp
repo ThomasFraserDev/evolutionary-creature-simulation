@@ -8,16 +8,20 @@ enum class Behaviour { // Class for creature behaviour
     Hunt
 };
 
+struct Genome {
+    float speed; // Creature movement speed
+    float vision; // Vision range of the creature, for detecting food etc. 
+    Color color;
+};
+
 struct Creature {
     Vector2 position;
     Vector2 velocity;
     float radius;
-    float vision; // Vision range of the creature, for detecting food etc. 
-    float speed; // Creature movement speed
+    Genome genome;
     int energy; // Creature energy, depletes over time until it reaches 0
     float lastReproduction; // Time since creature last reproduced 
     float deathTime; // Time it takes creature to finalise death
-    Color color;
     Behaviour behaviour;
     Vector2 targetPos;
     float behaviourUntil;
@@ -43,12 +47,15 @@ int main() {
             {static_cast<float>(GetRandomValue(20, 1480)), static_cast<float>(GetRandomValue(20, 980))}, // Position
             {GetRandomValue(-100, 100) / 100.0f, GetRandomValue(-100, 100) / 100.0f }, // Velocity
             15.0f, // Radius
-            static_cast<float>(GetRandomValue(300, 500)), // Vision
+
+            {static_cast<float>(GetRandomValue(300, 500)), // Vision
             GetRandomValue(10, 25) / 10.0f, // Speed
+            colors[GetRandomValue(0, 11)], // Colour
+            },
+
             1400, // Energy
             0.0f, // Time since last reproduction
             0.0f, // Time the creature has been in a dying state for
-            colors[GetRandomValue(0, 11)], // Colour
             Behaviour::Wander, // Behaviour
             {0.0f, 0.0f}, // Target position
             0.0f // Behaviour timer
@@ -86,7 +93,7 @@ int main() {
             float now = GetTime();
             int closestFood = -1; // Index of closest food to creature, set to none by default
             int closestCreature = -1;
-            float detectionRange = creature.vision * creature.vision; // Squared range of vision
+            float detectionRange = creature.genome.vision * creature.genome.vision; // Squared range of vision
             float closestDist = detectionRange; // Distance of the closest food
 
             if (creature.energy <= 300) {
@@ -119,8 +126,8 @@ int main() {
                         float len = sqrt(dx * dx + dy * dy); // Calculate and normalize direction for movement
                         if (len > 0.0001f) {
                             creature.behaviour = Behaviour::Hunt;
-                            float targetVx = (dx / len) * creature.speed;
-                            float targetVy = (dy / len) * creature.speed;
+                            float targetVx = (dx / len) * creature.genome.speed;
+                            float targetVy = (dy / len) * creature.genome.speed;
                             creature.velocity.x = creature.velocity.x * 0.9f + targetVx * 0.1f; // Turn creature towards direction of target creature
                             creature.velocity.y = creature.velocity.y * 0.9f + targetVy * 0.1f;
                         }
@@ -146,7 +153,7 @@ int main() {
                 float dy = food[closestFood].position.y - creature.position.y;
                 float len = sqrt(dx * dx + dy * dy); // Calculate and normalize direction for movement
                 if (len > 0.0001f) {
-                    desired = {(dx / len) * creature.speed, (dy / len) * creature.speed};
+                    desired = {(dx / len) * creature.genome.speed, (dy / len) * creature.genome.speed};
                 }
             }
 
@@ -155,7 +162,7 @@ int main() {
                 float dy = creatures[closestCreature].position.y - creature.position.y;
                 float len = sqrt(dx * dx + dy * dy); // Calculate and normalize direction for movement
                 if (len > 0.0001f) {
-                    desired = {(dx / len) * creature.speed, (dy / len) * creature.speed};
+                    desired = {(dx / len) * creature.genome.speed, (dy / len) * creature.genome.speed};
                 }
             }
 
@@ -164,7 +171,7 @@ int main() {
                 float dy = creature.targetPos.y - creature.position.y;
                 float len = sqrt(dx * dx + dy * dy); // Calculate and normalize direction for movement
                 if (len > 0.0001f) {
-                    desired = { (dx / len) * creature.speed, (dy / len) * creature.speed };
+                    desired = { (dx / len) * creature.genome.speed, (dy / len) * creature.genome.speed };
                 }
             }
 
@@ -173,7 +180,7 @@ int main() {
 
             creature.position.x += creature.velocity.x;
             creature.position.y += creature.velocity.y;
-            creature.energy -= 1 * creature.speed;
+            creature.energy -= 1 * creature.genome.speed;
 
             // Bounce off of borders of window
             if (creature.position.x - creature.radius < 0) {
@@ -268,16 +275,16 @@ int main() {
                     {creatures[i].position.x + GetRandomValue(-10, 10), creatures[i].position.y + GetRandomValue(-10, 10)},
                     {0.0f, 0.0f},
                     static_cast<float>(creatures[i].radius * 0.4),
-                    creatures[i].vision + (GetRandomValue(-10, 10)),
-                    creatures[i].speed + (GetRandomValue(-30, 30) / 100.0f),
+                    creatures[i].genome,
                     700,
                     static_cast<float>(GetTime()),
                     0.0f,
-                    creatures[i].color,
                     Behaviour::Wander,
                     {0.0f, 0.0f},
                     0.0f
                 };
+                offspring.genome.speed += GetRandomValue(-30, 30) / 100.0f;
+                offspring.genome.vision += GetRandomValue(-10, 10);
                 creatures.push_back(offspring);
                 creatures[i].lastReproduction = GetTime(); // Reset reproduction timer
                 creatures[i].energy -= 400;
@@ -321,11 +328,11 @@ int main() {
                     "Behaviour: %s\nEnergy: %d\nSpeed: %.2f\nRadius: %.2f\nVision: %.2f",
                     behaviourText,
                     creatures[trackedCreature].energy,
-                    creatures[trackedCreature].speed,
+                    creatures[trackedCreature].genome.speed,
                     creatures[trackedCreature].radius,
-                    creatures[trackedCreature].vision
+                    creatures[trackedCreature].genome.vision
                 ),
-                20,20,20,creatures[trackedCreature].color
+                20,20,20,creatures[trackedCreature].genome.color
             );
         }
 
@@ -333,7 +340,7 @@ int main() {
         ClearBackground(BLACK);
 
         for (const Creature& creature : creatures) {
-            DrawCircleV(creature.position, creature.radius, creature.color); // Draw each creature with their properties 
+            DrawCircleV(creature.position, creature.radius, creature.genome.color); // Draw each creature with their properties 
         }
 
         for (const Food& f : food) {
