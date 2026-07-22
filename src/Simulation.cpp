@@ -14,7 +14,12 @@ Simulation::Simulation() {
 
             {
             GetRandomValue(10, 25) / 10.0f, // Speed
+            0.1f, // Acceleration
             static_cast<float>(GetRandomValue(300, 500)), // Vision
+            15.0f, // Size
+            1.0f, // Metabolism
+            1400.0f, // Max energy
+            300.0, // Threshold for aggression
             colors[GetRandomValue(0, 11)], // Colour
             },
 
@@ -26,6 +31,7 @@ Simulation::Simulation() {
             0.0f // Behaviour timer
         };
         creatures.push_back(creature);
+        creatures.back().radius = creatures.back().genome.size;
     }
 
     const int foodCount = 25;
@@ -52,6 +58,8 @@ void Simulation::Update() {
     HandleFoodCollisions();
 
     HandleReproduction();
+
+    HandlePop();
 
     HandleDeaths();
 
@@ -114,7 +122,7 @@ void Simulation::UpdateCreatures() {
         float detectionRange = creature.genome.vision * creature.genome.vision; // Squared range of vision
         float closestDist = detectionRange; // Distance of the closest food
 
-        if (creature.energy <= 300) {
+        if (creature.energy <= creature.genome.aggression) {
             creature.behaviour = Behaviour::Hunt;
         } else if (creature.energy <= 700) {
             creature.behaviour = Behaviour::SeekFood;
@@ -126,7 +134,7 @@ void Simulation::UpdateCreatures() {
             };
             creature.behaviourUntil = now + GetRandomValue(2, 5);
         }
-        if (creature.energy <= 300) {
+        if (creature.energy <= creature.genome.aggression) {
             for (int i = 0; i < creatures.size(); ++i) {
                 if ((creature.position.x != creatures[i].position.x) && (creature.position.y != creatures[i].position.y) && (creature.radius > creatures[i].radius)) {
                     float dx = creatures[i].position.x - creature.position.x;
@@ -193,12 +201,24 @@ void Simulation::UpdateCreatures() {
             }
         }
 
-        creature.velocity.x = creature.velocity.x * 0.9f + desired.x * 0.1f;
-        creature.velocity.y = creature.velocity.y * 0.9f + desired.y * 0.1f;
+        creature.velocity.x += desired.x * creature.genome.acceleration;
+        creature.velocity.y += desired.y * creature.genome.acceleration;
+
+        float speed = sqrt(
+            creature.velocity.x * creature.velocity.x + creature.velocity.y * creature.velocity.y
+        );
+
+        if (speed > creature.genome.speed) {
+            creature.velocity.x =
+                (creature.velocity.x / speed) * creature.genome.speed;
+
+            creature.velocity.y =
+                (creature.velocity.y / speed) * creature.genome.speed;
+        }
 
         creature.position.x += creature.velocity.x;
         creature.position.y += creature.velocity.y;
-        creature.energy -= 1 * creature.genome.speed;
+        creature.energy -= 1 * creature.genome.metabolism; // Drain energy based on creature metabolism
 
         // Bounce off of borders of window
         if (creature.position.x - creature.radius < 0) {
@@ -296,19 +316,43 @@ void Simulation::HandleReproduction() {
                 {0.0f, 0.0f},
                 static_cast<float>(creatures[i].radius * 0.4),
                 creatures[i].genome,
-                700,
+                static_cast<int>(creatures[i].genome.maxEnergy * 0.5f),
                 static_cast<float>(GetTime()),
                 0.0f,
                 Behaviour::Wander,
                 {0.0f, 0.0f},
                 0.0f
             };
-            offspring.genome.speed += GetRandomValue(-30, 30) / 100.0f;
-            offspring.genome.vision += GetRandomValue(-10, 10);
+            MutateGenome(offspring.genome);
             creatures.push_back(offspring);
             creatures[i].lastReproduction = GetTime(); // Reset reproduction timer
             creatures[i].energy -= 400;
             creatures[i].radius *= 0.85f;
+        }
+    }
+}
+
+void Simulation::HandlePop() {
+    for (int i = 0; i < creatures.size(); ++i) {
+        if (creatures[i].radius >= 150.0f) {
+            for (int j = 0; j < 5; ++j) {
+                Creature offspring = { // Create offspring at an offset from its parent's position, with modifications of their properties
+                {creatures[i].position.x + GetRandomValue(-10, 10), creatures[i].position.y + GetRandomValue(-10, 10)},
+                {0.0f, 0.0f},
+                static_cast<float>(creatures[i].radius * 0.15),
+                creatures[i].genome,
+                static_cast<int>(creatures[i].genome.maxEnergy * 0.5f),
+                static_cast<float>(GetTime()),
+                0.0f,
+                Behaviour::Wander,
+                {0.0f, 0.0f},
+                0.0f
+            };
+            MutateGenome(offspring.genome);
+            creatures.push_back(offspring);
+            }
+            creatures.erase(creatures.begin() + i);
+            --i;
         }
     }
 }

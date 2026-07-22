@@ -25,6 +25,8 @@ private:
 
     void HandleReproduction();
 
+    void HandlePop();
+
     void HandleDeaths();
 
     void HandleMouseSelection();
