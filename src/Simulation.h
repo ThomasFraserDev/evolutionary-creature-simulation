@@ -4,6 +4,7 @@
 
 #include "Creature.h"
 #include "Food.h"
+#include "Rock.h"
 
 class Simulation {
 public:
@@ -23,6 +24,8 @@ private:
 
     void HandleFoodCollisions();
 
+    void HandleRockCollisions();
+
     void HandleReproduction();
 
     void HandlePop();
@@ -35,6 +38,7 @@ private:
 
     std::vector<Creature> creatures;
     std::vector<Food> food;
+    std::vector<Rock> rocks;
 
     float lastFoodSpawnTime = 0.0f;
 

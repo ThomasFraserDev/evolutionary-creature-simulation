@@ -45,7 +45,16 @@ Simulation::Simulation() {
         food.push_back(foodPiece);
     }
 
-    
+    const int rockCount = 5;
+
+    for (int i = 0; i < rockCount; ++i) {
+        Rock rock {
+            {static_cast<float>(GetRandomValue(20, 1480)),static_cast<float>(GetRandomValue(20, 980))}, // Position
+            25.0f, // Size
+            GRAY // Colour
+        };
+        rocks.push_back(rock);
+    }
 }
 
 void Simulation::Update() {
@@ -56,6 +65,8 @@ void Simulation::Update() {
     HandleCreatureCollisions();
 
     HandleFoodCollisions();
+
+    HandleRockCollisions();
 
     HandleReproduction();
 
@@ -80,6 +91,16 @@ void Simulation::Draw() {
             piece.position,
             {piece.size, piece.size},
             piece.color
+        );
+    }
+
+    for (const Rock& rock : rocks) {
+        DrawPoly(
+            rock.position,
+            6, // Sides
+            rock.size,
+            0.0f, // Rotation
+            rock.color
         );
     }
 
@@ -271,17 +292,20 @@ void Simulation::HandleCreatureCollisions() {
             dist = 0.0001f; // Avoid division by zero 
         }
 
-        float overlap = minDist - dist; // Check how much overlap
+        float overlap = minDist - dist + (2.0f * a.genome.acceleration); // Check how much overlap
         float nx = dx / dist;
         float ny = dy / dist;
 
         // Push creatures off of eachother
-        a.position.x -= nx * overlap * (b.radius / (a.radius + b.radius));
-        a.position.y -= ny * overlap * (b.radius / (a.radius + b.radius));
-        b.position.x += nx * overlap * (a.radius / (a.radius + b.radius));
-        b.position.y += ny * overlap * (a.radius / (a.radius + b.radius));
+        a.position.x -= nx * overlap * (b.radius / (a.radius + b.radius)) * 4;
+        a.position.y -= ny * overlap * (b.radius / (a.radius + b.radius)) * 4;
+        b.position.x += nx * overlap * (a.radius / (a.radius + b.radius)) * 4;
+        b.position.y += ny * overlap * (a.radius / (a.radius + b.radius)) * 4;
 
-        std::swap(a.velocity, b.velocity); // Bounce creatures off of eachother 
+        a.velocity.x -= nx;
+        a.velocity.y -= ny;
+        b.velocity.x += nx;
+        b.velocity.y += ny; // Bounce creatures off of eachother 
     };
 
     for (int i = 0; i < creatures.size(); ++i) {
@@ -303,6 +327,31 @@ void Simulation::HandleFoodCollisions() {
                 creature.radius += 3;
                 food.erase(food.begin() + i);
                 --i;
+            }
+        }
+    }
+}
+
+void Simulation::HandleRockCollisions() {
+    for (Creature& creature : creatures) {
+        for (const Rock& rock : rocks)
+        {
+            float dx = creature.position.x - rock.position.x;
+            float dy = creature.position.y - rock.position.y;
+
+            float dist = sqrtf(dx * dx + dy * dy);
+            float minDist = creature.radius + rock.size;
+
+            if (dist < minDist)
+            {
+                float nx = dx / dist;
+                float ny = dy / dist;
+
+                creature.position.x = rock.position.x + nx * minDist;
+                creature.position.y = rock.position.y + ny * minDist;
+
+                creature.velocity.x = nx * creature.genome.speed;
+                creature.velocity.y = ny * creature.genome.speed;
             }
         }
     }
