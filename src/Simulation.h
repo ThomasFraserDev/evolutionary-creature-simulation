@@ -43,4 +43,7 @@ private:
     float lastFoodSpawnTime = 0.0f;
 
     int trackedCreature = -1;
+
+    std::vector<int> populationHistory;
+    double lastGraphUpdate = 0.0;
 };

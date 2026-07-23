@@ -75,6 +75,15 @@ void Simulation::Update() {
     HandleDeaths();
 
     HandleMouseSelection();
+
+    if (GetTime() - lastGraphUpdate >= 1.0) {
+        populationHistory.push_back(creatures.size());
+        lastGraphUpdate = GetTime();
+
+        if (populationHistory.size() > 200) {
+            populationHistory.erase(populationHistory.begin());
+        }
+    }
 }
 
 void Simulation::Draw() {
@@ -123,6 +132,28 @@ void Simulation::Draw() {
             ),
             20,20,20,creatures[trackedCreature].genome.color
         );
+    }
+    const int graphX = 1100;
+    const int graphY = 50;
+    const int graphW = 350;
+    const int graphH = 200;
+
+    DrawRectangleLines(graphX, graphY, graphW, graphH, WHITE);
+
+    int maxPop = 1;
+    for (int p : populationHistory) {
+        if (p > maxPop) {
+            maxPop = p;
+        }
+    }
+    for (int i = 1; i < populationHistory.size(); i++) {
+        float x1 = graphX + (i - 1) * (graphW / (float)(populationHistory.size() - 1));
+        float y1 = graphY + graphH - (populationHistory[i - 1] / (float)maxPop) * graphH;
+
+        float x2 = graphX + i * (graphW / (float)(populationHistory.size() - 1));
+        float y2 = graphY + graphH - (populationHistory[i] / (float)maxPop) * graphH;
+
+        DrawLineV({x1, y1}, {x2, y2}, GREEN);
     }
 }
 
