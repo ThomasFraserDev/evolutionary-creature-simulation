@@ -76,6 +76,10 @@ void Simulation::Update() {
 
     HandleMouseSelection();
 
+    if (IsKeyPressed(KEY_G)) {
+        showPopulationGraph = !showPopulationGraph;
+    }
+
     if (GetTime() - lastGraphUpdate >= 1.0) {
         populationHistory.push_back(creatures.size());
         lastGraphUpdate = GetTime();
@@ -133,28 +137,100 @@ void Simulation::Draw() {
             20,20,20,creatures[trackedCreature].genome.color
         );
     }
-    const int graphX = 1100;
+    
+if (showPopulationGraph) { // Show/hide population graph once G key has been pressed
+    const int graphX = 1080;
     const int graphY = 50;
-    const int graphW = 350;
-    const int graphH = 200;
+    const int graphW = 380;
+    const int graphH = 230;
 
-    DrawRectangleLines(graphX, graphY, graphW, graphH, WHITE);
+    DrawRectangle( // Graph background
+        graphX, graphY, graphW, graphH,
+        Fade(BLACK, 0.85f)
+    );
 
+    DrawRectangleLines( // Graph border
+        graphX, graphY, graphW, graphH, WHITE
+    );
+
+    DrawText( // Title and current population
+        "Population History",
+        graphX + 10, graphY + 8, 20, WHITE
+    );
+
+    DrawText(
+        TextFormat("Current: %i",
+                   (int)creatures.size()),
+        graphX + 10, graphY + 31, 16, GREEN
+    );
+
+    // Plot area, leaving room for axis labels
+    const int plotX = graphX + 45;
+    const int plotY = graphY + 58;
+    const int plotW = graphW - 60;
+    const int plotH = graphH - 95;
+
+    
     int maxPop = 1;
-    for (int p : populationHistory) {
+    for (int p : populationHistory) { // Find the largest population in the history, to adapt size of the y axis
         if (p > maxPop) {
             maxPop = p;
         }
     }
-    for (int i = 1; i < populationHistory.size(); i++) {
-        float x1 = graphX + (i - 1) * (graphW / (float)(populationHistory.size() - 1));
-        float y1 = graphY + graphH - (populationHistory[i - 1] / (float)maxPop) * graphH;
 
-        float x2 = graphX + i * (graphW / (float)(populationHistory.size() - 1));
-        float y2 = graphY + graphH - (populationHistory[i] / (float)maxPop) * graphH;
+    // Horizontal grid lines and population labels
+    for (int i = 0; i <= 4; ++i) {
+        int y = plotY + i * plotH / 4;
+        int value = maxPop * (4 - i) / 4;
 
-        DrawLineV({x1, y1}, {x2, y2}, GREEN);
+        DrawLine(
+            plotX, y, plotX + plotW, y,
+            Fade(WHITE, 0.2f)
+        );
+
+        DrawText(
+            TextFormat("%i", value),
+            graphX + 3, y - 7, 12, LIGHTGRAY
+        );
     }
+
+    int count = (int)populationHistory.size(); // Draw population line
+
+    if (count >= 2) {
+        for (int i = 1; i < count; ++i) {
+            float x1 = plotX +
+                (i - 1) * plotW / (float)(count - 1);
+
+            float x2 = plotX +
+                i * plotW / (float)(count - 1);
+
+            float y1 = plotY + plotH -
+                populationHistory[i - 1] /
+                (float)maxPop * plotH;
+
+            float y2 = plotY + plotH -
+                populationHistory[i] /
+                (float)maxPop * plotH;
+
+            DrawLineEx(
+                {x1, y1}, {x2, y2},
+                2.0f, GREEN
+            );
+        }
+    }
+
+    // Axis labels
+    DrawText(
+        "Population",
+        plotX, graphY + graphH - 32, 12, LIGHTGRAY
+    );
+
+    DrawText(
+        "Time (seconds; newer ->)",
+        plotX + 100, graphY + graphH - 17,
+        10, LIGHTGRAY
+    );
+}
 }
 
 void Simulation::SpawnFood() {

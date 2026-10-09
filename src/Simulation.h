@@ -46,4 +46,5 @@ private:
 
     std::vector<int> populationHistory;
     double lastGraphUpdate = 0.0;
+    bool showPopulationGraph = false;
 };
