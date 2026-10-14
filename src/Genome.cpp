@@ -23,5 +23,4 @@ genome.vision       = Clamp(genome.vision, 50.0f, 1000.0f);
 genome.metabolism   = Clamp(genome.metabolism, 0.1f, 5.0f);
 genome.aggression   = Clamp(genome.aggression, 0.0f, genome.maxEnergy);
 genome.size         = Clamp(genome.size, 5.0f, 40.0f);
-
 }
